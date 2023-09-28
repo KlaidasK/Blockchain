@@ -58,4 +58,6 @@ Hash funkcijos pseudokodas
    |16|0.0010487 s|
    |32|0.0038497 s|
    |64|0.0160818 s|
+
+   ![alt text](https://github.com/[KlaidasK]/[Blockchian]/tree/[main]/Screenshot(1339).png?raw=true)
    
