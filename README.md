@@ -1,6 +1,6 @@
 # Blockchain
 
-#v0.2
+# v0.2
 
 Hash funkcijos pseudokodas
 
@@ -33,7 +33,7 @@ Hash funkcijos pseudokodas
 
 #Eksperimentinis tyrimas ir rezultatų analizė
 
-1.
+**1.**
     Du failai su po viena simbolį <br>
     input=G output=8615efe4dacd23c456bdcf9c3a55f3dc26256ff45a3da3d4d64d4facba45532c<br>
     input=& output=a619f168c6bd118c6ec9a908ee4d298c76f94128961de14c3e8979c8be0df94c<br>
@@ -48,9 +48,9 @@ Hash funkcijos pseudokodas
 
     Tuščias failas<br>
     output=Nera teksto<br>
-2. 
+**2.** 
    Output'ai visada yra vienodo dydžio, o to paties failo hash'as yra tas pats.
-3. 
+**3.** 
    |Eilutes|Laikas|
    | ------------- |------------- |
    |2|0,0005652 s|
@@ -62,3 +62,20 @@ Hash funkcijos pseudokodas
 
   
   ![alt text](https://github.com/KlaidasK/Blockchain/blob/0c10a6830f25a64686ca9b79f03a341823bb9885/Diag.png?raw=true)
+
+**4 ir 5.** <br>
+Sutampančių hash'ų nėra <br>
+**6.** <br>
+**Hexų lygyje** <br>
+Vidutinis skirtumas tarp hash'u 93.2201% <br>
+Maziausias skirtumas 26.5625% <br>
+Didziausias skirtumas 100% <br>
+
+**Bitų lygyje** <br>
+Vidutinis skirtumas tarp hash'u bitu lygmenyje 11.6525% <br>
+ Maziausias skirtumas bitu lygmenyje 3.32031% <br>
+Didziausias skirtumas bitu lygmenyje 12.5% <br>
+
+**7.** <br>
+   Hash funckijoje nebuvo kolizicjų ir hexų lygyje buvo pakankamai geras skirtingumas, tačiau bitų lygyje skirtingumas buvo gana mažas.
+    
