@@ -1,6 +1,6 @@
 # Blockchain
 
-#v0.1
+#v0.2
 
 Hash funkcijos pseudokodas
 
@@ -16,8 +16,9 @@ Hash funkcijos pseudokodas
     
     FOR i=0 to 32 //Pirmas ciklas
         FOR i=0 to input.length //Antras ciklas
-            sum = sum + static_cast<int>(input[ii]) * 23^k 
-            hash[i] = hash[i] ^ sum
+            sum = sum + static_cast<int>(input[ii]) * ^ k 
+            sum % 31
+            hash[i] = hash[i] ^ sum * 23
         END FOR
         k=k+1
     END FOR
@@ -34,16 +35,16 @@ Hash funkcijos pseudokodas
 
 1.
     Du failai su po viena simbolį <br>
-    input=G output=ad0fea482d8b62c4ad07ea402d8372dcad1fea582d9b62d4ad17ea502d9312ec<br>
+    input=G output=8615efe4dacd23c456bdcf9c3a55f3dc26256ff45a3da3d4d64d4facba45532c<br>
     input=& output=a619f168c6bd118c6ec9a908ee4d298c76f94128961de14c3e8979c8be0df94c<br>
 
     Du failai po 1001 elementų<br>
-    output=f97ebe8ba1726617a9c6aed3611ac6df990e1e3bc10266c709768ee3618a26ef<br>
-    output=af599092b70518be572988824f95804e1f198092e7e5a89ea7a918021ff5b0ee<br>
+    output=eece1183620e85eba6fe99333abe0dab9eae81c3528e35cb761e69334a3edd2b<br>
+    output=0cc74d3a90cf71da9447756ad8bf792a9c07ddfa202f619a0467a5aa48df09ea<br>
 
     Du failai po 1001 skiriantys tik vienu elementu<br>
-    output=a5f096d119e0a2c93d20ae4141c0ea3955b0c611898052e90d203e411180ba59<br>
-    output=25e03621b970a2993df08e11e1d02a09954086e1a9b0f2398dd07e9171b09a29<br>
+    output=2210c14952a4498dd2884131027c79b5c260e1b9b274095d72b801c1e2acf9e5<br>
+    output=c2604199b214699d52788161a24c792502b0a1a972e4a94dd2288151e2fcf9b5<br>
 
     Tuščias failas<br>
     output=Nera teksto<br>
@@ -52,11 +53,12 @@ Hash funkcijos pseudokodas
 3. 
    |Eilutes|Laikas|
    | ------------- |------------- |
-   |2|0.0003732 s|
-   |4|0.0004559 s|
-   |8|0.0006921 s|
-   |16|0.0010487 s|
-   |32|0.0038497 s|
-   |64|0.0160818 s|
+   |2|0,0005652 s|
+   |4|0,0006151 s|
+   |8|0,0009302 s|
+   |16|0,0011859 s|
+   |32|0,0015744 s|
+   |64|0,0037779 s|
 
-  ![alt text](https://github.com/KlaidasK/Blockchain/blob/main/Screenshot%20(1339).png?raw=true)
+  
+  ![alt text](https://github.com/KlaidasK/Blockchain/blob/0c10a6830f25a64686ca9b79f03a341823bb9885/Diag.png?raw=true)
