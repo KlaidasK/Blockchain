@@ -34,20 +34,21 @@ Hash funkcijos pseudokodas
 #Eksperimentinis tyrimas ir rezultatų analizė
 
 **1.**
-    Du failai su po viena simbolį <br>
-    input=G output=8615efe4dacd23c456bdcf9c3a55f3dc26256ff45a3da3d4d64d4facba45532c<br>
-    input=& output=a619f168c6bd118c6ec9a908ee4d298c76f94128961de14c3e8979c8be0df94c<br>
+Du failai su po viena simbolį <br>
+input=G output=8615efe4dacd23c456bdcf9c3a55f3dc26256ff45a3da3d4d64d4facba45532c<br>
+input=& output=a619f168c6bd118c6ec9a908ee4d298c76f94128961de14c3e8979c8be0df94c<br>
 
-    Du failai po 1001 elementų<br>
-    output=eece1183620e85eba6fe99333abe0dab9eae81c3528e35cb761e69334a3edd2b<br>
-    output=0cc74d3a90cf71da9447756ad8bf792a9c07ddfa202f619a0467a5aa48df09ea<br>
+Du failai po 1001 elementų<br>
+output=eece1183620e85eba6fe99333abe0dab9eae81c3528e35cb761e69334a3edd2b<br>
+output=0cc74d3a90cf71da9447756ad8bf792a9c07ddfa202f619a0467a5aa48df09ea<br>
 
-    Du failai po 1001 skiriantys tik vienu elementu<br>
-    output=2210c14952a4498dd2884131027c79b5c260e1b9b274095d72b801c1e2acf9e5<br>
-    output=c2604199b214699d52788161a24c792502b0a1a972e4a94dd2288151e2fcf9b5<br>
+Du failai po 1001 skiriantys tik vienu elementu<br>
+output=2210c14952a4498dd2884131027c79b5c260e1b9b274095d72b801c1e2acf9e5<br>
+output=c2604199b214699d52788161a24c792502b0a1a972e4a94dd2288151e2fcf9b5<br>
 
-    Tuščias failas<br>
-    output=Nera teksto<br>
+Tuščias failas<br>
+output=Nera teksto<br>
+
 **2.** 
    Output'ai visada yra vienodo dydžio, o to paties failo hash'as yra tas pats.
 **3.** 
