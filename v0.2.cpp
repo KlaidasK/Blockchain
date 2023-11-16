@@ -15,6 +15,7 @@
 #include <execution>
 #include <ctime>
 #include <format>
+#include <locale>
 
 using std::string;
 using std::cout;
@@ -22,6 +23,7 @@ using std::endl;
 using std::cin;
 using std::endl;
 using std::vector;
+
 
 
 string customHash2(const std::string& input) {
@@ -55,7 +57,7 @@ string customHash2(const std::string& input) {
 
 class User {
 
-    private:
+    protected:
     double eur; //Valiutos atsitiktinis balansas
     string name; //Vardas
     public:
@@ -80,11 +82,14 @@ class User {
         void setname(string _value) { this->name = _value; }
         string getpublic_key() const { return public_key; }
         void setpublic_key(string _value) { this->public_key = _value; }
+        virtual bool hasSufficientFunds(double amount) const {
+            return eur >= amount;
+        }
 
         ~User() { eur = 0; name.clear(); public_key.clear(); }
 };
 
-class Transaction {
+class Transaction{
 
     private:
          string HashID; //kitų transakcijos laukų hash'as
@@ -104,25 +109,75 @@ class Transaction {
             this->HashID = customHash2(hash);
         }
 
-        Transaction(string h, string s, string r, double e)
+        Transaction(string h, string s, string r, double e, vector<User>& g)
         {
             string hash;
             this->sender = s;
             this->receiver = r;
             this->suma = e;
+            if (!CheckBalance(g)) {
+                // Cancel the constructor if there are insufficient funds
+                this->sender = "";
+                this->receiver = "";
+                this->suma = 0;
+                return;
+            }
+            if (!CheckValidity()) {
+                // Cancel the constructor if there are insufficient funds
+                this->sender = "";
+                this->receiver = "";
+                this->suma = 0;
+                return;
+            }
+
             hash = sender + receiver + std::to_string(suma);
+            UpdateUser(g);
             this->HashID = customHash2(hash);
         }
 
-        Transaction(string s, string r, double e) {
+        Transaction(string s, string r, double e, vector<User>&g) {
             string hash;
             this->sender = s;
             this->receiver = r;
             this->suma = e;
+            if (!CheckBalance(g)) {
+                // Cancel the constructor if there are insufficient funds
+                this->sender = "";
+                this->receiver = "";
+                this->suma = 0;
+                return;
+            }
             hash = sender + receiver + std::to_string(suma);
+            UpdateUser(g);
             this->HashID = customHash2(hash);
         }
 
+        bool CheckBalance(const std::vector<User>& g) {
+            for (const auto& user : g) {
+                if (sender == user.getpublic_key() && user.geteur() < suma) {
+                    // Return false if there are insufficient funds
+                    //std::cerr << "Error: Insufficient funds for sender." << std::endl;
+                    return false;
+                }
+            }
+            // Return true if the balance check is successful
+            return true;
+        }
+
+        void UpdateUser(vector<User>& g) {
+            for (auto &i : g) {
+                if (receiver==i.getpublic_key()) { i.seteur(i.geteur() + suma); }
+                if (sender == i.getpublic_key()) { i.seteur(i.geteur() - suma); }
+            }
+        }
+
+        bool CheckValidity() {
+            string hash;
+            hash = sender + receiver + std::to_string(suma);
+            if (HashID != customHash2(hash)) { cout << "Suklastota transakcija" << endl; return false; }
+            return true;
+        }
+        
         string gethash() const { return HashID; }
         void sethash(string _value) { this->HashID = _value; }
         string getsender() const { return sender; }
@@ -194,14 +249,13 @@ private:
 
         std::string getCurrentTimestampISO8601() const {
             auto now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-            std::tm tm = *std::gmtime(&now);
+            std::tm tm = *std::localtime(&now);
             std::stringstream ss;
             ss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
             return ss.str();
         }
-
-
     };
+
     class Body {
     private:
         vector<Transaction>body;
@@ -218,11 +272,13 @@ private:
             body.push_back(g);
         };
         inline void setBody(vector<Transaction>g) {
-            body = g;
+            for (auto i : g) {
+                if(i.getsuma()!=0) body.push_back(i);
+            }
         };
     };
 
-    std::string calculateHash() const {
+    string calculateHash() const {
         std::stringstream ss;
         
         ss << BlockHeader.getPrev_Block_Hash() << BlockHeader.getVersion() << BlockHeader.getnonce() << BlockHeader.getTimestamp() << BlockHeader.getMerkel_Root_Hash() << BlockHeader.getdiffTarget();
@@ -234,20 +290,25 @@ private:
         return hash;
     };
 
-    std::string calculateMerkleRoot(const std::vector<Transaction>& transactions) {
+    string calculateMerkleRoot(const std::vector<Transaction>& transactions) {
         if (transactions.empty()) {
             return "";
         }
         if (transactions.size() == 1) {
             return transactions[0].gethash();
         }
-
         std::vector<Transaction> nextLevel;
         for (size_t i = 0; i < transactions.size(); i += 2) {
             if (i + 1 < transactions.size()) {
                 // Combine and hash pairs of transactions
+                vector <User> g;
+                User g1("1", "1", 0.01);
+                User g2("2", "2", 0);
+                g.push_back(g1);
+                g.push_back(g2);
+
                 std::string combinedData = transactions[i].gethash() + transactions[i + 1].gethash();
-                nextLevel.push_back(Transaction("", "", 0.0)); // Create a placeholder transaction
+                nextLevel.push_back(Transaction("1", "2", 0.0, g)); // Create a placeholder transaction
                 nextLevel.back().sethash(customHash2(combinedData+ ""+ std::to_string(0.0)));
             }
             else {
@@ -255,7 +316,6 @@ private:
                 nextLevel.push_back(transactions[i]);
             }
         }
-
         return calculateMerkleRoot(nextLevel);
     }
 
@@ -275,7 +335,7 @@ public:
         hash = mineBlock();
     }
 
-    void addTransaction(const Transaction& transaction) {
+    void addTransaction(const Transaction transaction) {
         BlockBody.setBody(transaction);
         hash = mineBlock(); // Update the block's hash after adding a transaction.
     }
@@ -287,6 +347,7 @@ public:
 
     std::string mineBlock() {
         BlockHeader.setMerkel_Root_Hash(calculateMerkleRoot(BlockBody.getBody()));
+        BlockHeader.setNonce(0);
         while (true) {
             BlockHeader.setTimestamp(BlockHeader.getCurrentTimestampISO8601());
             std::string hashAttempt = calculateHash();
@@ -294,8 +355,27 @@ public:
                 return hashAttempt;
             }
             BlockHeader.setNonce(BlockHeader.getnonce()+1);
-            
         }
+    }
+
+    std::string LimitedMineBlock() {
+        BlockHeader.setMerkel_Root_Hash(calculateMerkleRoot(BlockBody.getBody()));
+
+        BlockHeader.setdiffTarget("0000");
+        BlockHeader.setNonce(0);
+        while (BlockHeader.getnonce() < 100000) {
+                BlockHeader.setTimestamp(BlockHeader.getCurrentTimestampISO8601());
+                std::string hashAttempt = calculateHash();
+
+                if (hashAttempt.substr(0, BlockHeader.getdiffTarget().size()) == BlockHeader.getdiffTarget()) {
+                    std::cout << "Hash'avimo bandymu skaicius: " << BlockHeader.getnonce() << std::endl;
+                    return hashAttempt;
+                }
+
+                BlockHeader.setNonce(BlockHeader.getnonce() + 1);
+            }
+
+            throw std::runtime_error("Kasimas uztruko daugiau bandymu negu 100000.");
     }
     
     inline string getHash() const { return hash; }  // get'eriai, inline
@@ -304,13 +384,7 @@ public:
     
 };
 
-
-
-
-
-
-
-void UserGen(vector<User> &g) {
+void UserGen(vector<User> &g, int sz) {
 
     User temp;
     const std::string characters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -322,7 +396,7 @@ void UserGen(vector<User> &g) {
     std::string randomString;
     randomString.reserve(15);
 
-    for (int i = 0; i < 1000; i++) {
+    for (int i = 0; i < sz; i++) {
         for (int j = 0; j < 10; ++j) {
             randomString += characters[dist(mt)];
             temp.public_key += characters[dist(mt)];
@@ -336,20 +410,34 @@ void UserGen(vector<User> &g) {
     }
 }
 
-void TranGen(vector<Transaction>& g, vector<User> u) {
-    Transaction temp;
+void TranGen(vector<Transaction>& g, vector<User> u, int sz) {
+    
     using hrClock = std::chrono::high_resolution_clock;
     std::mt19937_64 mt(static_cast<long unsigned int>(hrClock::now().time_since_epoch().count()));
-    std::uniform_int_distribution<int> dist(0, 999);
+    std::uniform_int_distribution<int> dist(0, u.size()-1);
     std::uniform_int_distribution<int> dist2(100, 1000000);
     string hash;
     int count = 0;
-    for (int i = 0; i < 10000; i++) {
-        temp.setsender(u[dist(mt)].getpublic_key());
+    for (int i = 0; i < sz; i++) {
+        string sender="";
+        string receiver="";
+        double suma = 0;
+        int index = dist(mt);
+        sender = u[index].getpublic_key();
+        
+        suma = dist2(mt);
         do {
-            temp.setreceiver(u[dist(mt)].getpublic_key());
-        } while (temp.getsender() == temp.getreceiver());
-        temp.setsuma(dist2(mt));
+            suma = dist2(mt);
+            index = dist(mt);
+        } while (suma >= u[index].geteur());
+
+        sender = u[index].getpublic_key();
+        do{
+           receiver = u[dist(mt)].getpublic_key();
+        }while (sender == receiver);
+
+        Transaction temp(sender, receiver, suma, u);
+
         hash = temp.getsender() + temp.getreceiver()+ std::to_string(temp.getsuma());
         temp.sethash(customHash2(hash));
         g.push_back(temp);
@@ -357,39 +445,100 @@ void TranGen(vector<Transaction>& g, vector<User> u) {
     }
 }
 
-vector<Transaction> ChosenTransactions(vector<Transaction> g) {
+vector<Transaction> ChosenTransactions(vector<Transaction> g, int sz) {
+    if (g.size() < sz) return g;
     vector<Transaction> BlockTransactions;
+    vector<Transaction> temp = g;
     using hrClock = std::chrono::high_resolution_clock;
     std::mt19937_64 mt(static_cast<long unsigned int>(hrClock::now().time_since_epoch().count()));
-    std::uniform_int_distribution<int> dist(0, 9999);
-    for (int i = 0; i < 100; i++) {
-        BlockTransactions.push_back(g[dist(mt)]);
+    
+    for (int i = 0; i < sz; i++) {
+        std::uniform_int_distribution<int> dist(0, temp.size() - 1);
+        int index = dist(mt);
+        BlockTransactions.push_back(temp[index]);
+        temp.erase(temp.begin() + index);
     }
     return BlockTransactions;
-
 }
 
 class Blockchain {
 private:
     std::vector<Block> chain;
-    string Difficulty_Target="00";
+    string Difficulty_Target="0000";
     double Version = 1.0;
+    int maxTransactionsPerBlock = 100;  // Maximum transactions per block
 
 public:
     Blockchain() {
         // Create the genesis block.
+        vector<User>u;
+        User u1("Alice", "wafjwoidjao", 100);
+        User u2("Bob", "wafhaidhioajocowj", 100);
+        u.push_back(u1);
+        u.push_back(u2);
         Block genesisBlock("0", Version, "MerkelRootHash1", 0, Difficulty_Target);
-        Transaction tx1("Alice", "Bob", 5.0);
+        Transaction tx1("Alice", "Bob", 5.0, u);
         genesisBlock.addTransaction(tx1);
         chain.push_back(genesisBlock);
     }
 
     void addBlock(const std::vector<Transaction>& transactions) {
-        const Block& prevBlock = chain.back();
-        Block newBlock(prevBlock.getHash(), prevBlock.BlockHeader.getVersion(), "MerkelRootHashN", 0, Difficulty_Target);
-        newBlock.BlockBody.setBody(transactions);
-        newBlock.setHash(newBlock.mineBlock());
-        chain.push_back(newBlock);
+        if (transactions.size() <= maxTransactionsPerBlock) {
+            const Block& prevBlock = chain.back();
+            Block newBlock(prevBlock.getHash(), prevBlock.BlockHeader.getVersion(), "MerkelRootHashN", 0, Difficulty_Target);
+            newBlock.BlockBody.setBody(transactions);
+            newBlock.setHash(newBlock.mineBlock());
+            chain.push_back(newBlock);
+        }
+        else { cout << "Transakciju kiekis negali būti didesnis uz 100" << endl; }
+    }
+
+    void addTransactionToBlock(int blockIndex, const Transaction& transaction) {
+        
+        if (blockIndex >= 0 && blockIndex < chain.size()) {
+            if (chain[blockIndex].BlockBody.getBody().size() < maxTransactionsPerBlock) {
+                chain[blockIndex].addTransaction(transaction);
+                chain[blockIndex].setHash(chain[blockIndex].mineBlock());
+            }
+            else {
+                std::cout << "Transakciju kiekis negali buti didesnis uz 100" << std::endl;
+            }
+        }
+        else {
+            std::cout << "Neteisingas bloko indexas." << std::endl;
+        }
+    }
+
+    void addTransactionsToBlock(int blockIndex, const vector<Transaction> t) {
+        if (chain[blockIndex].BlockBody.getBody().size() + t.size() < maxTransactionsPerBlock) {
+            for (auto i : t) {
+                if (blockIndex >= 0 && blockIndex < chain.size()) {
+                    chain[blockIndex].addTransaction(i);
+                    chain[blockIndex].setHash(chain[blockIndex].mineBlock());
+                }
+                else {
+                    std::cout << "Neteisingas bloko indexas." << std::endl;
+                }
+            }
+        }
+        else { cout << "Blokas pilnas. Pasirinkite kitą." << endl; }
+    }
+
+    // Function to return a specific block by index
+    const Block& getBlockByIndex(int blockIndex) const {
+        if (blockIndex >= 0 && blockIndex < chain.size()) {
+            return chain[blockIndex];
+        }
+        else {
+            // Handle the case where the block index is invalid
+            // For now, returning a default-constructed block; you may want to throw an exception or handle differently
+            std::cout << "Invalid block index. Returning a default-constructed block." << std::endl;
+            return chain.back();
+        }
+    }
+
+    const Block& getLastBlock() const {
+            return chain.back();
     }
 
     const std::vector<Block>& getChain() const {
@@ -400,8 +549,11 @@ public:
 void BlockInfo(Blockchain b) {
     // Display block information.
 
-    const std::vector<Block>& chain = b.getChain();
-    for (const Block& block : chain) {
+    Block block = b.getLastBlock();
+
+        cout << endl;
+        cout << "-----------------------------------------" << endl;
+        cout << endl;
         std::cout << "Previous Block Hash: " << block.BlockHeader.getPrev_Block_Hash() << std::endl;
         std::cout << "Merkel root hash: " << block.BlockHeader.getMerkel_Root_Hash()<< std::endl;
         std::cout << "Nonce: " << block.BlockHeader.getnonce() << std::endl;
@@ -413,22 +565,166 @@ void BlockInfo(Blockchain b) {
         cout << endl;
         cout << "-----------------------------------------" << endl;
         cout << endl;
+    
+}
+
+void BlockInfoByIndex(Blockchain b, int index) {
+    // Display block information.
+
+    Block block = b.getBlockByIndex(index);
+
+    cout << endl;
+    cout << "-----------------------------------------" << endl;
+    cout << endl;
+    std::cout << "Previous Block Hash: " << block.BlockHeader.getPrev_Block_Hash() << std::endl;
+    std::cout << "Merkel root hash: " << block.BlockHeader.getMerkel_Root_Hash() << std::endl;
+    std::cout << "Nonce: " << block.BlockHeader.getnonce() << std::endl;
+    std::cout << "Version: " << block.BlockHeader.getVersion() << std::endl;
+    std::cout << "Difficulty target: " << block.BlockHeader.getdiffTarget() << std::endl;
+    std::cout << "Block Hash: " << block.getHash() << std::endl;
+    std::cout << "Number of transactions in block: " << block.BlockBody.getBody().size() << std::endl;
+    std::cout << "Timestamp: " << block.BlockHeader.getTimestamp() << std::endl;
+    cout << endl;
+    cout << "-----------------------------------------" << endl;
+    cout << endl;
+
+}
+
+void TransactionInfo(vector<Transaction>t) {
+    cout << endl;
+    for (auto i : t) {
+        cout << "Transakcijos Id: " << i.gethash() << std::setw(64);
+        cout << "Transakcijos suma: " << i.getsuma() << endl;
     }
+    cout << endl;
+
+
+
 }
 
 void RemoveFromPool(Blockchain b, vector<Transaction>& t) {
     int count = 0;
-    const std::vector<Block>& chain = b.getChain();
-    
-    for (const Block& block : chain) {
-        cout << block.BlockBody.getBody().size() << endl;
-        for (int i = 0; i < block.BlockBody.getBody().size(); i++) {
-            for (int j = 0; j < t.size(); j++) {
-                if (block.BlockBody.getBody()[i].gethash() == t[j].gethash()) { t.erase(t.begin() + j); count++; }
+    Block block = b.getLastBlock();
+    if (block.getHash() == b.getBlockByIndex(0).getHash()) return;
+
+    for (auto it = t.begin(); it != t.end();) {
+        bool erased = false;
+        for (const auto& blockTx : block.BlockBody.getBody()) {
+            if (blockTx.gethash() == it->gethash()) {
+                it = t.erase(it);
+                erased = true;
+                count++;
+                break; // Exit the inner loop after erasing
             }
         }
+
+        // Increment the iterator only if no erasing occurred
+        if (!erased) {
+            ++it;
+        }
     }
-    cout << count << endl;
+
+        cout << "Pasalintu transakciju kiekis: " << count << endl;
+}
+
+
+void saveTransactions(vector<Transaction> t, string name) {
+
+    std::ofstream fr(name);
+
+    for (auto i : t) {
+        fr << i.gethash() << " " << i.getsender() << " " << i.getreceiver() << " " << i.getsuma() << endl;
+
+    }
+}
+
+void readTransactions(vector<Transaction>& t, string name) {
+    std::vector<std::string> splited;
+    std::string word, line;
+    int max = 0;
+    double sk = 0.0; // Iš viso žodžių faile
+    int stul = 0; //stulpelių sk.
+    Transaction temp;
+    std::ifstream file(name);
+
+    if (file.is_open()) {
+        std::string line;
+        while (std::getline(file, line)) {
+            std::istringstream ss(line);
+
+            string h, s, r = "";
+            double p = 0;
+            ss >> h >> s >> r >> p;
+            temp.sethash(h);
+            temp.setsender(s);
+            temp.setreceiver(r);
+            temp.setsuma(p);
+            t.push_back(temp);
+        }
+        file.close();
+    }
+}
+
+void UserInfo(vector<User> u) {
+
+
+    cout << endl;
+    for (auto i : u) {
+        cout << "Naudotojo vardas: " << i.getname() << std::setw(64);
+        cout << "Naudotojo balanasas: " << i.geteur() << endl;
+    }
+    cout << endl;
+}
+
+void TransactionInfo(vector<Transaction> t, int index) {
+    if (index >= 0 && index < t.size()) {
+        cout<<"Transakcijos ID: "<<t[index].gethash()<< endl;
+        cout<<"Siuntejas: "<< t[index].getsender() << endl;
+        cout<<"Gavejas: "<< t[index].getreceiver() << endl;
+        cout<<"Suma:"<< t[index].getsuma() << endl;
+    }
+
+
+}
+
+void Mining_Test(Blockchain &b, vector<User>u, vector<Transaction> t) {
+    vector<Transaction>ChosenT;
+    for (int i = 0; i < 5; i++) {
+        ChosenT = ChosenTransactions(t, 100);
+        b.addBlock(ChosenT);
+        cout << "Sukurtas Blokas" << endl;
+    }
+    cout << "Blokai sukurti" << endl;
+    std::vector<Block> blocks = b.getChain();
+
+    
+    std::random_device rd;
+    std::mt19937 g(rd());
+    int count = 0;
+
+    while (!blocks.empty()) {
+        // Shuffle the blocks to choose a random order
+ 
+        std::shuffle(blocks.begin(), blocks.end(), g);
+
+        // Randomly choose a block
+        Block& block = blocks.back();
+        blocks.pop_back();
+
+        try {
+            count++;
+            string minedHash = block.LimitedMineBlock();
+            
+            // Print the results
+            std::cout << "Iskasto bloko hash'as: " << minedHash << std::endl;
+            // Successfully mined a block, exit the loop
+            cout << "Bandymai: " << count << endl;
+            break;
+        }
+        catch (const std::runtime_error& e) {
+            std::cerr << "Error: " << e.what() << std::endl;
+        }
+    }
 
 }
 
@@ -436,59 +732,45 @@ void RemoveFromPool(Blockchain b, vector<Transaction>& t) {
 
 int main()
 {
-
-
+    int t_sz = 10000;
+    int u_sz = 1000;
+    cout << "Iveskite naudotoju kieki: " << endl;
+    cin >> u_sz;
+    cout << "Iveskite transakciju kieki: " << endl;
+    cin >> t_sz;
     vector<User>u;
     vector<Transaction>t;
     vector<Transaction>ChosenT;
-    UserGen(u);
-    TranGen(t,u);
-    ChosenT=ChosenTransactions(t);
-    
+    UserGen(u,u_sz);
+    TranGen(t,u,t_sz);
+    //TransactionInfo(t, 47);
+
+
 
     Blockchain blockchain;
-
-    // Add transactions to a new block.
-    blockchain.addBlock(ChosenT);
-    // Access and display the blockchain.
-    BlockInfo(blockchain);
-    RemoveFromPool(blockchain, t);
-
+    //UserInfo(u);
+    Mining_Test(blockchain,u,t);
+    //BlockInfoByIndex(blockchain,2);
     
     
+    /*while (t.size() >= 100) {
+        cout << endl;
+        
+        ChosenT = ChosenTransactions(t, 100);
+        
+        blockchain.addBlock(ChosenT);
+        BlockInfo(blockchain);
+        TransactionInfo(ChosenT);
+        RemoveFromPool(blockchain, t);
+        cout << "Transactions in block removed from Transaction pool" << endl;
+        cout << "Transakciju kiekis: " << t.size() << endl << endl;
+        ChosenT.clear();
+   } 
+   */
+    //UserInfo(u);
+    
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    /*for (auto& i : u) {
-        cout << i.getname() << endl;
-        cout<<i.getpublic_key()<<endl;
-        cout<<i.geteur()<<endl;
-    }
-    */
-
-
-
+   
 
 
     return 0;
